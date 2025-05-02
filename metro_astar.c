@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define NUM_STATIONS 14
-#define INF 1000000.0f  // value to represent “no connection”
+#define INF 1000000.0f  // value to represent “no connection” = (INF = no direct connection)
 
 typedef struct {
     int station;                // current station index (0-based)
@@ -13,7 +13,7 @@ typedef struct {
     int path_len;               // length of the path
 } Node;
 
-// Table 1: straight‑line (heuristic) distances in km
+// Table 1: straight‑line distances in km
 float direct_dist[NUM_STATIONS][NUM_STATIONS] = {
     {    0,  4.3,  9.0, 14.7, 17.2, 13.1, 11.8, 11.3,  8.2, 10.7,  8.4, 14.1, 18.5, 17.3},
     {  4.3,    0,  5.3, 10.3, 13.1, 12.7, 10.3,  6.9,  4.3,  7.4,  5.9, 11.3, 14.8, 12.9},
@@ -31,22 +31,23 @@ float direct_dist[NUM_STATIONS][NUM_STATIONS] = {
     { 17.3, 12.9, 10.3,  6.0,  6.9, 21.1, 17.1,  6.4,  9.6,  8.4, 12.7, 12.3,  6.1,    0}
 };
 
-// Table 2: actual travel distances in km (INF = no direct connection)
+// Table 2: actual distances in km
 float real_dist[NUM_STATIONS][NUM_STATIONS] = {
+    //  E1    E2    E3    E4    E5    E6    E7    E8    E9   E10   E11   E12   E13   E14
     {    0,  4.3,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF},
-    {  4.3,    0,  5.3,  INF, 14.3,  INF,  INF,  4.3,  INF,  INF,  INF,  INF,  INF,  INF},
-    {  INF,  5.3,    0,  5.9,  INF,  INF,  4.1,  INF,  INF,  INF,  INF,  INF,  INF,  INF},
-    {  INF,  INF,  5.9,    0,  2.9,  INF,  INF,  INF,  INF,  INF,  INF,  6.2,  INF,  INF},
-    {  INF, 14.3,  INF,  2.9,    0,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF},
+    {  4.3,    0,  5.3,  INF, INF,  INF,  14.3,  INF,  4.3,  INF,  INF,  INF,  INF,  INF},
+    {  INF,  5.3,    0,  5.9,  INF,  INF,  8.5,  4.1,  INF,  INF,  INF,  INF,  INF,  INF},
+    {  INF,  INF,  5.9,    0,  2.9,  INF,  INF,  4.0,  INF,  INF,  INF,  INF,  INF,  6.2},
+    {  INF,  INF,  INF,  2.9,    0,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF},
     {  INF,  INF,  INF,  INF,  INF,    0,  3.2,  INF,  INF,  INF,  INF,  INF,  INF,  INF},
-    {  INF,  INF,  4.1,  INF,  INF,  3.2,    0,  INF,  INF,  INF,  INF,  INF,  INF,  INF},
-    {  INF,  4.3,  INF,  INF,  INF,  INF,  INF,    0,  5.0,  INF,  INF,  INF,  INF,  INF},
-    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  5.0,    0,  3.0,  3.4,  INF,  INF,  INF},
-    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  3.0,    0,  5.6,  9.1,  INF,  INF},
-    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  3.4,  5.6,    0,  INF,  INF,  INF},
-    {  INF,  INF,  INF,  6.2,  INF,  INF,  INF,  INF,  INF,  9.1,  INF,    0,  INF,  INF},
-    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,    0,  INF},
-    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,    0}
+    {  INF, 14.3,  8.5,  INF,  INF,  3.2,    0,  INF,  INF,  INF,  INF,  INF,  INF,  INF},
+    {  INF,  INF,  4.1,  4.0,  INF,  INF,  INF,    0,  5.0,  6.0,  INF,  INF,  INF,  INF},
+    {  INF,  4.3,  INF,  INF,  INF,  INF,  INF,  5.0,    0,  3.0,  3.4,  INF,  INF,  INF},
+    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  6.0,  3.0,    0,  INF,  5.6,  9.1,  INF},
+    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  3.4,  INF,    0,  INF,  INF,  INF},
+    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  5.6,  INF,    0,  INF,  INF},
+    {  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  9.1,  INF,  INF,    0,  INF},
+    {  INF,  INF,  INF,  6.2,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,    0}
 };
 
 int visited[NUM_STATIONS];
