@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUM_STATIONS 14
+#define NUM_STATIONS 14 // number of stations from question
 #define INF 1000000.0f  // value to represent “no connection” = (INF = no direct connection)
 
 typedef struct {
@@ -59,7 +59,7 @@ float heuristic(int current, int goal) {
     return (direct_dist[current][goal] / 40.0f) * 60.0f;
 }
 
-// print the found path as E1, E2, …
+// print the found path as E1, E2 ... (0 in input is E1)
 void print_path(int path[], int len) {
     printf("Path: ");
     for (int i = 0; i < len; i++) {
@@ -68,7 +68,7 @@ void print_path(int path[], int len) {
     printf("\n");
 }
 
-// A* search from start to goal (0-based indices)
+// A* search from start to goal
 void a_star(int start, int goal) {
     memset(visited, 0, sizeof(visited));
     Node frontier[100];
@@ -99,7 +99,7 @@ void a_star(int start, int goal) {
             return;
         }
 
-        // remove from frontier
+        // remove node from frontier
         for (int i = best_idx; i < frontier_size - 1; i++)
             frontier[i] = frontier[i + 1];
         frontier_size--;
@@ -111,9 +111,13 @@ void a_star(int start, int goal) {
             if (real_dist[current.station][i] != INF && !visited[i]) {
                 float travel_time = (real_dist[current.station][i] / 40.0f) * 60.0f;
                 Node neighbor = {0};
+
+                
                 neighbor.station  = i;
                 neighbor.g        = current.g + travel_time;
                 neighbor.f        = neighbor.g + heuristic(i, goal);
+
+
                 memcpy(neighbor.path, current.path, sizeof(int) * current.path_len);
                 neighbor.path[current.path_len] = i;
                 neighbor.path_len = current.path_len + 1;
