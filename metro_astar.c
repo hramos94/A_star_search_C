@@ -103,22 +103,25 @@ void a_star(int start, int goal) {
         for (int i = best_idx; i < frontier_size - 1; i++)
             frontier[i] = frontier[i + 1];
         frontier_size--;
-
+        
+        //mark as visited
         visited[current.station] = 1;
 
         // expand neighbors
         for (int i = 0; i < NUM_STATIONS; i++) {
             if (real_dist[current.station][i] != INF && !visited[i]) {
+                // travel time to neighbor
                 float travel_time = (real_dist[current.station][i] / 40.0f) * 60.0f;
-                Node neighbor = {0};
-
-                
+                Node neighbor = {0};                
                 neighbor.station  = i;
                 neighbor.g        = current.g + travel_time;
                 neighbor.f        = neighbor.g + heuristic(i, goal);
 
-
+                // copy current path into neighbor
                 memcpy(neighbor.path, current.path, sizeof(int) * current.path_len);
+
+                // every successor start with the same route (current)
+                // we just need to add a new frontier
                 neighbor.path[current.path_len] = i;
                 neighbor.path_len = current.path_len + 1;
                 frontier[frontier_size++] = neighbor;
