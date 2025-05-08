@@ -4,17 +4,21 @@
 
 #define NUM_STATIONS 14 // number of stations from question
 #define INF 1000000.0f  // value to represent “no connection” (INF = no direct connection)
+#define LINES_COUNT 4
+#define TRANSFER_TIME 3.0f
 
 typedef struct {
-    int station;                // current station index (0-based)
-    float g;                    // cost so far (minutes)
+    int station;                // current station index (starts from 0)
+    float g;                    // cost (minutes)
     float f;                    // g + heuristic
     int path[NUM_STATIONS];     // sequence of stations visited
     int path_len;               // length of the path
+    int last_line;              // line ID (-1 for start station)
 } Node;
 
 // Table 1: straight‑line distances in km
 float direct_dist[NUM_STATIONS][NUM_STATIONS] = {
+    //  E1    E2    E3    E4    E5    E6    E7    E8    E9   E10   E11   E12   E13   E14
     {    0,  4.3,  9.0, 14.7, 17.2, 13.1, 11.8, 11.3,  8.2, 10.7,  8.4, 14.1, 18.5, 17.3},
     {  4.3,    0,  5.3, 10.3, 13.1, 12.7, 10.3,  6.9,  4.3,  7.4,  5.9, 11.3, 14.8, 12.9},
     {  9.0,  5.3,    0,  5.9,  8.5, 10.9,  7.7,  4.1,  6.5,  8.9,  9.4, 14.5, 13.9, 10.3},
@@ -50,6 +54,14 @@ float real_dist[NUM_STATIONS][NUM_STATIONS] = {
     {  INF,  INF,  INF,  6.2,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,  INF,    0}
 };
 
+// line 0: Red, line 1: Green, line 2: Blue, line 3: Yellow
+int lines[LINES_COUNT][NUM_STATIONS] = {
+    // E1  E2  E3  E4  E5  E6  E7  E8  E9  E10 E11 E12 E13 E14
+    {1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // Red
+    {0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0}, // Green
+    {0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0}, // Blue
+    {0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0}  // Yellow
+};
 int visited[NUM_STATIONS];
 
 // heuristic: estimated travel time (minutes) at 40 km/h
@@ -68,6 +80,20 @@ void print_path(int path[], int len) {
     printf("\n");
 }
 
+//check if 2 stations share the same line
+int select_line(int current_station, int next_station, int last_line)
+{
+    if (last_line>= 0 && lines[last_line][current_station] && lines[last_line][next_station]){
+        return last_line;
+    }
+    for (int line = 0; line < LINES_COUNT; line++){
+        if (lines[line][current_station] && lines[line][next_station]){
+            return line;
+        }
+    }
+    return -1;
+}
+
 // A* search from start to goal
 void a_star(int start, int goal) {
     memset(visited, 0, sizeof(visited));
@@ -81,6 +107,7 @@ void a_star(int start, int goal) {
     initial.f         = heuristic(start, goal);
     initial.path[0]   = start;
     initial.path_len  = 1;
+    initial.last_line = -1; // initial station
     frontier[frontier_size++] = initial;
 
     while (frontier_size > 0) {
@@ -108,21 +135,28 @@ void a_star(int start, int goal) {
         visited[current.station] = 1;
 
         // expand neighbors
-        for (int i = 0; i < NUM_STATIONS; i++) {
-            if (real_dist[current.station][i] != INF && !visited[i]) {
+        for (int next_station = 0; next_station < NUM_STATIONS; next_station++) {
+            if (real_dist[current.station][next_station] != INF && !visited[next_station]) {
                 // travel time to neighbor
-                float travel_time = (real_dist[current.station][i] / 40.0f) * 60.0f;
-                Node neighbor = {0};                
-                neighbor.station  = i;
+                float travel_time = (real_dist[current.station][next_station] / 40.0f) * 60.0f;
+
+                int edge_line = select_line(current.station, next_station, current.last_line);
+                // check changing lines (penalty 3 min)
+                if (current.last_line != -1 && edge_line != current.last_line){
+                    travel_time += TRANSFER_TIME;
+                }
+
+                Node neighbor = {0};
+                neighbor.station  = next_station;
                 neighbor.g        = current.g + travel_time;
-                neighbor.f        = neighbor.g + heuristic(i, goal);
+                neighbor.f        = neighbor.g + heuristic(next_station, goal);
 
                 // copy current path into neighbor
                 memcpy(neighbor.path, current.path, sizeof(int) * current.path_len);
 
                 // every successor start with the same route (current)
                 // we just need to add a new frontier
-                neighbor.path[current.path_len] = i;
+                neighbor.path[current.path_len] = next_station;
                 neighbor.path_len = current.path_len + 1;
                 frontier[frontier_size++] = neighbor;
             }
