@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define NUM_STATIONS 14 // number of stations from question
-#define INF 1000000.0f  // value to represent “no connection” = (INF = no direct connection)
+#define INF 1000000.0f  // value to represent “no connection” (INF = no direct connection)
 
 typedef struct {
     int station;                // current station index (0-based)
